@@ -1,0 +1,9 @@
+{
+  "name": "Thether USD",
+  "symbol": "USDT Trc2O",
+  "contract": "TS19aXnBLtsS7a243wT3NHevPhVLrEK3Cu",
+  "decimals": 6,
+  "network": "TRON",
+  "description": "Thether USD \u2014 TRC20 stablecoin for fast, low-cost transfers on TRON.",
+  "website": "https://ThetherUSD-StableLabs.io"
+}
