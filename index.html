@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ThetherUSD • USDT Trc2O - StableLabs.io</title>
-  <meta name="description" content="ThetherUSD — TRC20 stablecoin. Fast, low-cost transfers on TRON. Professional, audited-ready UI for dApps and wallets." />
+  <meta name="description" content="ThetherUSD — TRC20 stablecoin. Fast, low-cost transfers on TRON. Professional, audit-ready UI for dApps and wallets." />
   <link rel="icon" href="logo.png" />
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/tronweb/dist/TronWeb.min.js"></script>
@@ -24,6 +24,8 @@
         <a href="#about">About</a>
         <a href="#token">Token</a>
         <a href="#web3">Web3</a>
+        <a href="#buy">Buy</a>
+        <a href="#news">News</a>
         <a href="#contact" class="btn btn-outline">Contact</a>
       </nav>
     </div>
@@ -34,7 +36,7 @@
       <div class="hero-inner">
         <div>
           <h2>Stable. Fast. Trustworthy.</h2>
-          <p class="lead">ThetherUSD (USDT Trc2O) — professional UI tailored for stablecoin integrations on the TRON network. Designed to be clean, elegant, and audit-friendly.</p>
+          <p class="lead">ThetherUSD (USDT Trc2O) — profesional UI untuk stablecoin di jaringan TRON. Elegan, modern, dan siap integrasi Web3.</p>
 
           <div class="cta">
             <button class="btn btn-primary" id="connect-cta">Connect Wallet</button>
@@ -45,11 +47,11 @@
             <div class="card token-card">
               <img src="logo.png" class="card-logo" alt="token logo">
               <div>
-                <div class="large" id="token-name">Thether USD</div>
-                <div class="small muted">Symbol: <strong id="token-symbol">USDT Trc2O</strong> • Decimals: <strong id="token-decimals">6</strong></div>
+                <div class="large">Thether USD</div>
+                <div class="small muted">Symbol: <strong>USDT Trc2O</strong> • Decimals: <strong>6</strong></div>
                 <div class="small muted" style="margin-top:6px">Network: TRON (TRC20)</div>
-                <div style="margin-top:6px">Contract: <code id="token-contract">TS19aXnBLtsS7a243wT3NHevPhVLrEK3Cu</code></div>
-                <div class="small" style="margin-top:6px">Total Supply: <strong id="token-supply">100,000,000,000,000</strong></div>
+                <div style="margin-top:6px">Contract: <code>TS19aXnBLtsS7a243wT3NHevPhVLrEK3Cu</code></div>
+                <div class="small" style="margin-top:6px">Total Supply: <strong>100,000,000,000,000</strong></div>
               </div>
             </div>
           </div>
@@ -71,14 +73,14 @@
 
           <div class="card" style="margin-top:16px;">
             <h4 style="margin:0 0 8px 0">Send USDT Trc2O</h4>
-            <form id="send-form" aria-label="Send USDT Trc2O">
+            <form id="send-form">
               <div style="margin-top:8px;">
                 <label class="small">Recipient (TRON address)</label><br>
-                <input id="to" placeholder="T..." aria-label="recipient address">
+                <input id="to" placeholder="T...">
               </div>
               <div style="margin-top:8px;">
-                <label class="small">Amount (USDT Trc2O)</label><br>
-                <input id="amount" placeholder="0.0" aria-label="amount">
+                <label class="small">Amount</label><br>
+                <input id="amount" placeholder="0.0">
               </div>
               <div style="margin-top:12px;">
                 <button class="btn btn-primary" type="submit" style="width:100%">Send</button>
@@ -90,44 +92,51 @@
       </div>
     </section>
 
+    <!-- BUY TOKEN SECTION -->
+    <section class="section" id="buy">
+      <h2>Beli ThetherUSD</h2>
+      <p class="muted">Harga token adalah <strong>5% dari 1 USD</strong> dan selalu mengikuti harga USD secara realtime.</p>
+
+      <div class="card" style="margin-top:12px;max-width:420px;">
+        <h3 style="margin-top:0">Pembelian Token</h3>
+        <div class="small muted">Harga Token (Realtime):</div>
+        <div class="large" id="tokenPrice">Loading...</div>
+
+        <form id="buy-form" style="margin-top:16px;">
+          <input type="hidden" id="recipientWallet" value="TTZyeQR1fBpmhn2Y4Pcrj2Nw3WpioRtScU">
+          <label class="small">Jumlah USD:</label>
+          <input id="usdAmount" placeholder="0.0">
+
+          <label class="small" style="margin-top:8px;">Anda Mendapatkan (USDT Trc2O):</label>
+          <input id="tokenReceive" disabled>
+
+          <button class="btn btn-primary" type="submit" style="width:100%;margin-top:12px;">Buy Token</button>
+        </form>
+      </div>
+
+      <div style="margin-top:20px;">
+        <a href="https://coinmarketcap.com/" class="btn btn-outline" target="_blank">Cek Harga di CoinMarketCap</a>
+      </div>
+    </section>
+
+    <!-- NEWS SECTION -->
+    <section class="section" id="news">
+      <h2>Crypto News Update</h2>
+      <p class="muted">Berita terbaru pasar crypto — selalu update otomatis.</p>
+
+      <div id="news-feed" class="grid" style="margin-top:12px;">
+        <div class="card small muted">Loading news... (sumber: CoinDesk)</div>
+      </div>
+    </section>
+
     <section class="section" id="about">
       <h2>About Thether USD</h2>
-      <p class="muted">Thether USD is a TRC20 stablecoin intended for fast, low-cost transfers on the TRON network. The interface focuses on clarity, auditability, and developer-friendly token metadata.</p>
-
-      <div class="grid" style="margin-top:12px;">
-        <div class="card">
-          <h3 style="margin-top:0">Tokenomics</h3>
-          <div class="distribution">
-            <div class="dist-row"><span>Contract Address</span><span><code>TS19aXnBLtsS7a243wT3NHevPhVLrEK3Cu</code></span></div>
-            <div class="dist-row"><span>Decimals</span><span>6</span></div>
-            <div class="dist-row"><span>Total Supply</span><span>100,000,000,000,000</span></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 style="margin-top:0">Roadmap</h3>
-          <div class="timeline">
-            <div class="item"><div class="dot"></div><div class="content"><h4 style="margin:0">Phase 1</h4><div class="small muted">Token launch & basic wallet integrations</div></div></div>
-            <div class="item" style="margin-top:10px"><div class="dot"></div><div class="content"><h4 style="margin:0">Phase 2</h4><div class="small muted">Explorer & liquidity listings</div></div></div>
-            <div class="item" style="margin-top:10px"><div class="dot"></div><div class="content"><h4 style="margin:0">Phase 3</h4><div class="small muted">Audit & partnerships</div></div></div>
-          </div>
-        </div>
-
-      </div>
+      <p class="muted">Thether USD adalah stablecoin TRC20 untuk transfer cepat dan biaya rendah.</p>
     </section>
 
     <section class="section" id="web3">
       <h2>Web3 Integration</h2>
-      <p class="muted">Designed for easy integration with TronLink and TronWeb. The UI keeps on-chain values visible, uses meaningful naming for token metadata and prepares places for proof of reserve / audit badges.</p>
-
-      <div class="card" style="margin-top:12px">
-        <h3 style="margin:0 0 8px 0">How to use</h3>
-        <ol class="small muted" style="margin:0 0 0 18px;padding:0">
-          <li>Install TronLink extension and unlock your wallet.</li>
-          <li>Click <strong>Connect Wallet</strong> and allow the dApp to read your address.</li>
-          <li>Check your token balance and send transfers securely via the wallet popup.</li>
-        </ol>
-      </div>
+      <p class="muted">Integrasi TronLink & TronWeb, baca saldo & kirim token.</p>
     </section>
 
     <section class="section" id="contact">
@@ -136,15 +145,14 @@
         <div class="card contact">
           <h3 style="margin-top:0">Contact</h3>
           <p class="muted">Email: <strong>yoharasinosuke@yahoo.com</strong></p>
-          <p class="muted">Telegram: <strong><a href="https://t.me/ThetherUSD_StableLabs" target="_blank" style="color:var(--accent)">t.me/ThetherUSD_StableLabs</a></strong></p>
-          <p class="muted">Twitter: <strong><a href="https://twitter.com/ThetherUSD_Labs" target="_blank" style="color:var(--accent)">@ThetherUSD_Labs</a></strong></p>
+          <p class="muted">Telegram: <strong><a href="https://t.me/ThetherUSD_StableLabs" target="_blank">t.me/ThetherUSD_StableLabs</a></strong></p>
+          <p class="muted">Twitter: <strong><a href="https://twitter.com/ThetherUSD_Labs" target="_blank">@ThetherUSD_Labs</a></strong></p>
         </div>
-
         <div class="card">
           <h3 style="margin-top:0">Quick Links</h3>
           <ul class="small muted" style="margin:0 0 0 18px;padding:0">
             <li>Website: <strong>ThetherUSD-StableLabs.io</strong></li>
-            <li>Explorer: Use TronScan and search contract address</li>
+            <li>Explorer: TronScan</li>
           </ul>
         </div>
       </div>
@@ -158,6 +166,6 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
